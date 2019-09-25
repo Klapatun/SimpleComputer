@@ -9,13 +9,40 @@
 #include <time.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <iostream>
 
-#define ESC	"\033"
+using namespace std;
+
+/*#define ESC	"\033"*/
+
+
+class TermLinux {
+	private:
+		const string ESC = "\033";
+
+	public:
+
+		void home(void) {
+			cout << ESC + "[H";
+		}
+
+		void clrscr(void) {
+			cout << ESC + "[2J";
+		}
+
+
+		TermLinux(void) {
+
+		}
+};
 
 int main(){
 
-	printf(ESC "[2J"); 	//clear
-	printf(ESC "[H");	//home
+	TermLinux l;
 
+	l.home();
+	l.clrscr();
+
+	cout << "Hello\n";
     return 0;
 }
