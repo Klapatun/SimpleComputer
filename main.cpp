@@ -3,13 +3,10 @@
 **
 */
 #include <string.h>
-#include <signal.h>
 #include <sys/ioctl.h>
-#include <stdio.h>
-#include <time.h>
-#include <stdlib.h>
-#include <signal.h>
 #include <iostream>
+#include <unistd.h>
+#include <fcntl.h>
 
 using namespace std;
 
@@ -18,19 +15,63 @@ using namespace std;
 
 class TermLinux {
 	private:
-		const string ESC = "\033";
-
+		const char* CLEAR = "\E[2J";
+		const char* GOTOXY = "\E%d;%dH";
+		const char* SETFCOLOR = "\E[3%dm";
+		const char* SETBCOLOR = "\E[4%dm";
+		const char* ESCSPACE = "\E[1C";
+		const char* ESC = "\E";
 	public:
 
 		void home(void) {
-			cout << ESC + "[H";
+			cout << ESC << "[H";
 		}
 
-		void clrscr(void) {
-			cout << ESC + "[2J";
+		int mt_clrscr(void) {
+
+			int term = open("/dev/tty", O_RDWR);
+
+			if (term == -1) {
+				cerr << "Terminal Error!";
+				close(term);
+				return -1;
+			}
+			
+			write(term, CLEAR, sizeof(CLEAR));
+			close(term);
+			return 0;
 		}
 
+		int mt_gotoXY(int x, int y) {
+			
+			int term = open("/dev/tty", O_RDWR);
 
+			if (term == -1) {
+				cerr << "Terminal Error!";
+				close(term);
+				return -1;
+			}
+			char buff[50];
+			
+			sprintf(buff, GOTOXY, x, y);
+
+			write(term, buff, strlen(buff));
+			close(term);
+			return 0;
+		}
+
+		int mt_getscreensize (int* rows, int* cols) {
+			return 0;
+		}
+
+		//int mt_setfgcolor (enum colors) {
+		//	return 0;
+		//}
+
+		//int mt_setbgcolor (enum colors) {
+		//	return 0;
+		//}
+		
 		TermLinux(void) {
 
 		}
@@ -40,8 +81,7 @@ int main(){
 
 	TermLinux l;
 
-	l.home();
-	l.clrscr();
+	l.mt_clrscr();
 
 	cout << "Hello\n";
     return 0;
