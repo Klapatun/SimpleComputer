@@ -31,11 +31,12 @@ namespace TermLinux {
     class MyTerm {
         private:
             const char* CLEAR = "\E[2J";
-            const char* GOTOXY = "\E%d;%dH";
+            const char* GOTOXY = "\E[%d;%dH";
             const char* SETFGCOLOR = "\E[3%dm";
             const char* SETBGCOLOR = "\E[4%dm";
             const char* ESCSPACE = "\E[1C";
             const char* ESC = "\E";
+
         public:
 
             int mt_clrscr(void) {
@@ -62,7 +63,7 @@ namespace TermLinux {
                     close(term);
                     return -1;
                 }
-                char buff[50];
+                char buff[50] = {0};
 
                 sprintf(buff, GOTOXY, x, y);
 
@@ -129,7 +130,7 @@ namespace TermLinux {
 
     class MyBigChars: public MyTerm {
 
-    private:
+    private:        
         const char* CHARS    = "+0123456789abcdef";
         const int  CHARS_SIZE = 17;
 
@@ -137,15 +138,15 @@ namespace TermLinux {
         const char* EXIT_ALT_CHARSET_MODE = "\E(B";
 
 
-        const char LT = 'l';
-        const char LB = 'm';
-        const char RT = 'k';
-        const char RB = 'j';
-        const char VL = 'x';
-        const char HL = 'q';
+        const char* SPACE           = " ";
+        const char* ACS_CKBOARD     = "a";
 
-        const char SPACE = ' ';
-        const char ACS_CKBOARD = 'a';
+        const char* LT              = "l"; // left top
+        const char* LB              = "m"; // left bottom
+        const char* RT              = "k"; // right top
+        const char* RB              = "j"; // right bottom
+        const char* VL              = "x"; // vert line
+        const char* HL              = "q"; // horis line
 
     public:
 
@@ -185,26 +186,26 @@ namespace TermLinux {
             }
 
             mt_gotoXY(x1,y1);
-            bc_printA(&LT);
+            bc_printA(LT);
             for(int i=0; i < y2-2; ++i) {
-                bc_printA(&HL);
+                bc_printA(HL);
             }
 
-            bc_printA(&RT);
-            for(int i=0; i <= x2-2; ++i) {
+            bc_printA(RT);
+            for(int i=1; i <= x2-2; ++i) {
                 mt_gotoXY(x1+i, y1);
-                bc_printA(&VL);
+                bc_printA(VL);
                 mt_gotoXY(x1+i, y1+y2-1);
-                bc_printA(&VL);
+                bc_printA(VL);
             }
 
             mt_gotoXY(x1+x2-1, y1);
-            bc_printA(&LB);
+            bc_printA(LB);
             for(int i=0; i < y2-2; ++i) {
-                bc_printA(&HL);
+                bc_printA(HL);
             }
 
-            bc_printA(&RB);
+            bc_printA(RB);
 
             close(term);
             return 0;
@@ -231,9 +232,9 @@ namespace TermLinux {
                 int tmp = (*src) >> i;
                 for(int j=7; j >= 0; --j) {
                     if(tmp >> j & 0x1) {
-                        bc_printA(&ACS_CKBOARD);
+                        bc_printA(ACS_CKBOARD);
                     } else {
-                        bc_printA(&SPACE);
+                        bc_printA(SPACE);
                     }
                     mt_gotoXY(++x, y);
                 }
@@ -385,9 +386,56 @@ namespace TermLinux {
 int main(){
 
     TermLinux::MyTerm l;
-    l.mt_setfgcolor(TermLinux::RED);
-	l.mt_clrscr();
+    TermLinux::MyBigChars bigChar;
 
-	cout << "Hello\n";
+    int term = open("/dev/tty", O_RDWR);
+        if (term == -1) {
+            cerr <<"displayBorders: terminal error! \n";
+            close(term);
+            return -1;
+        }
+
+        l.mt_clrscr();
+
+        bigChar.bc_box(1, 1, 12, 61);
+        bigChar.bc_box(1, 62, 3, 22);
+        bigChar.bc_box(4, 62, 3, 22);
+        bigChar.bc_box(7, 62, 3, 22);
+        bigChar.bc_box(10, 62, 3, 22);
+        bigChar.bc_box(13, 1, 10, 46);
+        bigChar.bc_box(13, 47, 10, 37);
+
+        l.mt_gotoXY(1, 30);
+        write(term, " Memory ", strlen(" Memory "));
+        l.mt_gotoXY(1, 67);
+        write(term, " accumulator ", strlen(" accumulator "));
+        l.mt_gotoXY(4, 63);
+        write(term, " instructionCounter ", strlen(" instructionCounter "));
+        l.mt_gotoXY(7, 68);
+        write(term, " Operation ", strlen(" Operation "));
+        l.mt_gotoXY(10, 69);
+        write(term, " Flags ", strlen(" Flags "));
+        l.mt_gotoXY(13, 48);
+        write(term, " Keys: ", strlen(" Keys: "));
+
+        l.mt_gotoXY(14, 48);
+        write(term, "l  - load", strlen("l  - load"));
+        l.mt_gotoXY(15, 48);
+        write(term, "s  - save", strlen("s  - save"));
+        l.mt_gotoXY(16, 48);
+        write(term, "r  - run", strlen("r  - run"));
+        l.mt_gotoXY(17, 48);
+        write(term, "t  - step", strlen("t  - step"));
+        l.mt_gotoXY(18, 48);
+        write(term, "e  - edit cell", strlen("e  - edit cell"));
+        l.mt_gotoXY(19, 48);
+        write(term, "i  - reset", strlen("i  - reset"));
+        l.mt_gotoXY(20, 48);
+        write(term, "F5 - accumulator", strlen("F5 - accumulator"));
+        l.mt_gotoXY(21, 48);
+        write(term, "F6 - instructionCounter", strlen("F6 - instructionCounter"));
+
+        l.mt_gotoXY(23, 1);
+        close(term);
     return 0;
 }
