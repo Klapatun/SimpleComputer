@@ -4,6 +4,7 @@
 */
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/time.h>
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
@@ -26,6 +27,233 @@ namespace TermLinux {
         BLUE,
         MAGENTA,
         DEFAULT	= 9
+    };
+
+    class mySimpleComputer {
+    private:
+
+        const uint8_t MEMSIZE = 100;
+        const uint8_t COMMANDS_COUNT = 44;
+        int ram[100];
+
+        uint8_t FLAGS;
+        enum {
+            OF = 1,				// overflow flag
+            ZF, 				// zero flag
+            IF,     			// ignoring flag
+            OM, 				// out of memory
+            BC, 				// bad command
+            IR          		// is run
+        };
+
+        int commands[37] = {
+            0x10,
+            0x11,
+            0x20,
+            0x21,
+            0x30,
+            0x31,
+            0x32,
+            0x33,
+            0x40,
+            0x41,
+            0x42,
+            0x43,
+            0x51,
+            0x52,
+            0x53,
+            0x54,
+            0x55,
+            0x56,
+            0x57,
+            0x58,
+            0x59,
+            0x60,
+            0x61,
+            0x63,
+            0x64,
+            0x65,
+            0x66,
+            0x67,
+            0x68,
+            0x69,
+            0x70,
+            0x71,
+            0x72,
+            0x73,
+            0x74,
+            0x75,
+            0x76
+        };
+
+        int accumulator;            //аккумулятор
+        int instructionCounter;     //предыдущая команда
+        int operand;				// операнд
+        int command;				// команда
+
+        int f_key, f_ign;
+
+        struct itimerval nval, oval;
+
+    public:
+
+        int mem_ptr;				// указатель на ячейку памяти
+
+        int sc_memoryInit()
+        {
+            int i = 0;
+            for(i = 0; i < MEMSIZE; ++i)
+                ram[i] = 0;
+
+            accumulator             = 0;
+            instructionCounter		= 0;
+            command                 = 0;
+            operand                 = 0;
+            mem_ptr                 = 0;
+
+            return 0;
+        }
+
+        int sc_memorySet(int address, int value)
+        {
+            if( (address < MEMSIZE) && (address >= 0) ) {
+                ram[address] = value;
+            } else {
+                sc_regSet(OM, 1); // Поднимаем флаг "out of memory"
+                return -1;
+            }
+            return 0;
+        }
+
+        int sc_memoryGet(int address, int *value)
+        {
+            if(address < MEMSIZE && address >= 0) {
+                *value = ram[address];
+            } else {
+                sc_regSet(OM, 1); // Поднимаем флаг "out of memory"
+                return -1;
+            }
+            return 0;
+        }
+
+        int sc_memorySave(char *filename)
+        {
+            FILE *file = fopen(filename, "wb");
+
+            if (!file) {
+                fprintf(stderr, "Схоронялка памяти: File not open! \n");
+                return -1;
+            }
+
+            fwrite(ram, MEMSIZE, sizeof(int), file);
+            fclose(file);
+            return 0;
+        }
+
+        int sc_memoryLoad(char *filename)
+        {
+            FILE *file = fopen(filename, "rb");
+
+            if (!file) {
+                fprintf( stderr, "Загружалка памяти: File not open! \n");
+                return -1;
+            }
+
+            fread(ram, MEMSIZE, sizeof(int), file);
+            fclose(file);
+            return 0;
+        }
+
+        int sc_regInit()
+        {
+            FLAGS = 0;
+            return 0;
+        }
+
+        int sc_regSet(int flag, int value)
+        {
+            if (value < 0 || value > 1) {
+                fprintf(stderr, "sc_regSet: bad value!");
+                return -1;
+            }
+
+            if (flag < 0 || flag > 6) {
+                fprintf(stderr, "sc_regSet: bad flag!");
+                return -1;
+            }
+
+            if (value)
+                FLAGS |= value << (flag - 1);
+            else
+                FLAGS &= ~( 1 << (flag - 1));
+
+            return 0;
+        }
+
+        int sc_regGet (int flag, int *value)
+        {
+            if (flag > 0 && flag <= 6)
+            {
+                *value = (FLAGS >> (flag - 1)) & 0x1;
+            } else {
+                fprintf(stderr, "sc_regGet: bad flag or value = NULL!");
+                return -1;
+            }
+
+            return 0;
+        }
+
+        // Производим кодирование
+        int sc_commandEncode (int command, int operand, int *value)
+        {
+            int i, f = 0;
+
+            for (i = 0; i < COMMANDS_COUNT; ++i)
+                if (commands[i] == command)	{
+                    f = 1;
+                    break;
+                }
+
+            if (f) {
+                *value = (command & 0x7F) << 7 | (operand & 0x7F);
+                sc_regSet(BC, 0);
+                return 0;
+            }
+
+            sc_regSet(BC, 1);
+            return -1;
+        }
+
+        // Производим декодирование
+        int sc_commandDecode (int value, int *command, int *operand)
+        {
+            if (!value || value >> 14 || !command || !operand) {
+                sc_regSet(BC, 1);
+                return -1;
+            }
+
+            *operand = value & 0x7F;
+            *command = (value >> 7) & 0x7F;
+            return 0;
+        }
+
+        // Упс, что-то пошло не так
+        int err_msg(const char *file, int line)
+        {
+            if (!file || !line)
+                return -1;
+
+            cerr << "Обшибка в файле" << file << "," << "на строчке: " << line;
+
+            return 0;
+        }
+
+        /* run timer */
+        void timerStart()
+        {
+            setitimer (ITIMER_REAL, &nval, &oval);
+        }
+
     };
 
     class MyTerm {
@@ -377,7 +605,10 @@ namespace TermLinux {
         }
     };
 
+
+
 }
+
 
 
 
@@ -437,5 +668,74 @@ int main(){
 
         l.mt_gotoXY(23, 1);
         close(term);
+
+
+        {
+            TermLinux::mySimpleComputer Simple;
+            int term = open("/dev/tty", O_RDWR);
+
+            if(term == -1) {
+                cerr << "displayMemory: Terminal Error!\n";
+                close(term);
+                return -1;
+            }
+
+            int value, comm, oper, k;
+
+            l.mt_gotoXY(2, 2);
+
+            int j = 2;
+
+            for (int i=1; i <= 100; ++i) {
+                Simple.sc_memoryGet(i-1, &value);
+
+                k = (value >> 14) & 0x1;
+                oper = value & 0x7F;
+                comm = value >> 7 & 0x7F;
+
+                char buff[50];
+
+                if(k) {
+                    sprintf(buff, i%10 ? " %04X " : " %04X", value & 0x1FFF );
+                }
+                else {
+                    sprintf(buff, i%10 ? "%c%02X%02X " : "%c%02X%02X", (k == 0) ? '+' : ' ', comm, oper);
+                }
+
+                write(term, buff, strlen(buff));
+
+                if(i%10 == 0 && i != 0) {
+                    ++j;
+                    l.mt_gotoXY(j,2);
+                }
+
+            }
+
+            char str_1[50];
+            l.mt_gotoXY(Simple.mem_ptr/10+2, Simple.mem_ptr%10*6+2);
+
+            Simple.sc_memoryGet(Simple.mem_ptr, &value);
+
+            k = value >> 14 & 0x1;
+            oper = value & 0x7F;
+            comm = value >> 7 & 0x7F;
+
+            if(k) {
+                sprintf(str_1, " %04X", value & 0x1FFF);
+            }
+            else {
+                sprintf(str_1, "%c%02X%02X", !k ? '+' : ' ', comm, oper);
+            }
+
+            l.mt_setbgcolor(TermLinux::GREEN);
+            write(term, str_1, strlen(str_1));
+            l.mt_setbgcolor(TermLinux::DEFAULT);
+            l.mt_gotoXY(23, 1);
+
+            close(term);
+
+        }
+
+
     return 0;
 }
