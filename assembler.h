@@ -8,6 +8,7 @@
 
 enum
 {
+	VALUE = 0x01,
 	READ = 0X10,
 	WRITE,
 
@@ -50,7 +51,7 @@ enum
 	MOVCR
 };
 
-int asm_processing(void);
+int asm_processing(char* asm_file, char* obj_file);
 
 
 #endif /*ASSEMBLER_H*/

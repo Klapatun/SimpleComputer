@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdint.h>
 
 #include <signal.h>
 #include <time.h>
@@ -23,8 +24,94 @@
 
 static int asm_encoding(char* command);
 
-int asm_processing(void){
+int asm_processing(char* asm_file, char* obj_file){
+
+	FILE *file_sa = fopen(asm_file, "rt");
 	
+	if (!file_sa) {
+		fprintf( stderr, "File .sa not open! \n");
+		return -1;
+	}
+
+	int addr = 0, oper = 0x0, value;
+	char* cmd[7] = {0};
+	char* asm_cmd[50] = {0};
+	char* coment[30] = {0};
+
+	char ram_tmp[MEMSIZE] = {0};
+
+	while(fgets(asm_cmd, 50, file_sa)) {
+		sscanf(asm_cmd, "%x %s %x ;%s", &addr, cmd, &oper, coment);
+
+		int num_cmd = asm_encoding(cmd);
+		uint16_t cell = (num_cmd<<8) | oper;
+
+		if(num_cmd) {
+			ram_tmp[addr] = cell;
+		}
+		else {
+			//Надо будет придумать, что тут будет делаться
+			fprintf( stderr, "Сommand incorrect: %s! \n", asm_cmd);
+			return -1;
+		}
+	}
+
+	FILE* file_o = fopen(obj_file, "wb");
+
+	if (!file_o) {
+		fprintf( stderr, "File .o not open! \n");
+		return -1;
+	}
+
+	fwrite(ram_tmp, sizeof(uint16_t), MEMSIZE, file_o);
+	//fwrite(ram_tmp, MEMSIZE, sizeof(uint16_t), file_o);
+
+	fclose(file_o);
+
+/*
+	while(fgets(asm_cmd, 50, file_sa)) {
+		sscanf(asm_cmd, "%x %s %x ;%s", &addr, cmd, &oper, coment);
+
+		int num_cmd = asm_encoding(cmd);
+		uint16_t cell = (num_cmd<<8) | oper;
+
+		if (num_cmd) {
+			FILE* file_o = fopen(obj_file, "ab");
+
+			if (!file_o) {
+				fprintf( stderr, "File .o not open! \n");
+				return -1;
+			}
+
+			fwrite(&cell, sizeof(uint16_t), 1, file_o);
+
+
+			fclose(file_o);
+		}
+
+		//sc_commandEncode(asm_encoding(cmd), oper, &value);
+    	//sc_memorySet(addr, value);
+	}
+*/
+	fclose(file_sa);
+/*
+	uint16_t b[10] = {0};
+
+	FILE* fb = fopen(obj_file, "rb");
+
+	if (!fb) {
+		fprintf( stderr, "File .o not open! \n");
+		return -1;
+	}
+
+	fread(b, sizeof(uint16_t), 2, fb);
+
+	fclose(fb);
+*/
+	return 0;
+}
+	
+	/*
 	int term = open(TERM, O_RDWR);
     if (term == -1) {
         fprintf(stderr, "%s\n", "asm_processing: terminal error");
@@ -40,11 +127,11 @@ int asm_processing(void){
     read(term, buff, 12);
     sscanf(buff, "%x %s %x", &addr, &com, &oper);
     sc_commandEncode(asm_encoding(com), oper, &value);
-    sc_memorySet(mem_ptr, value);
+    sc_memorySet(addr, value);
     clearInput();
     close(term);
 }
-
+*/
 static int asm_encoding(char* command) {
 
 	if (!strncmp(command, "READ", 4)) {
@@ -154,6 +241,9 @@ static int asm_encoding(char* command) {
 	}
 	else if (!strncmp(command, "MOVCR", 5)) {
 		return MOVCR;
+	}
+	else if (!strncmp(command, "=", 1)) {
+		return VALUE;
 	}
 	else {
 		return 0;
