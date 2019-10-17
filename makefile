@@ -1,8 +1,9 @@
-clear:
-	rm main
+
+run: prog
+	./prog
 
 prog:
-	g++ -w *.cpp -o main
+	$(CC) -w *.c -o prog
 
-run:
-	./main
+clean:
+	rm prog

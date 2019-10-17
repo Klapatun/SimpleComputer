@@ -1,24 +1,7 @@
 /*assembler.c*/
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <stdint.h>
-
-#include <signal.h>
-#include <time.h>
-#include <sys/time.h>
-
-#include "myBigChars.h"
-#include "myTerm.h"
-#include "read_key.h"
-#include "ui.h"
 #include "mySimpleComputer.h"
-#include "u_io.h"
-#include "read_key.h"
-#include "alu_cu.h"
-
-#include <string.h>
 #include "assembler.h"
 
 
@@ -38,16 +21,25 @@ int asm_processing(char* asm_file, char* obj_file){
 	char* asm_cmd[50] = {0};
 	char* coment[30] = {0};
 
-	char ram_tmp[MEMSIZE] = {0};
+	int ram_dump[MEMSIZE] = {0};
+
+	memcpy(ram_dump, ram, MEMSIZE);
 
 	while(fgets(asm_cmd, 50, file_sa)) {
 		sscanf(asm_cmd, "%x %s %x ;%s", &addr, cmd, &oper, coment);
 
 		int num_cmd = asm_encoding(cmd);
-		uint16_t cell = (num_cmd<<8) | oper;
 
 		if(num_cmd) {
-			ram_tmp[addr] = cell;
+			//ram_tmp[addr] = cell;
+			if (num_cmd != 0x01) {
+				sc_commandEncode(num_cmd, oper, &value);
+    		}
+    		else {
+    			value = oper;
+    		}
+    		
+    		sc_memorySet(addr, value);
 		}
 		else {
 			//Надо будет придумать, что тут будет делаться
@@ -56,43 +48,9 @@ int asm_processing(char* asm_file, char* obj_file){
 		}
 	}
 
-	FILE* file_o = fopen(obj_file, "wb");
+	sc_memorySave(obj_file);
+	memcpy(ram, ram_dump, MEMSIZE);
 
-	if (!file_o) {
-		fprintf( stderr, "File .o not open! \n");
-		return -1;
-	}
-
-	fwrite(ram_tmp, sizeof(uint16_t), MEMSIZE, file_o);
-	//fwrite(ram_tmp, MEMSIZE, sizeof(uint16_t), file_o);
-
-	fclose(file_o);
-
-/*
-	while(fgets(asm_cmd, 50, file_sa)) {
-		sscanf(asm_cmd, "%x %s %x ;%s", &addr, cmd, &oper, coment);
-
-		int num_cmd = asm_encoding(cmd);
-		uint16_t cell = (num_cmd<<8) | oper;
-
-		if (num_cmd) {
-			FILE* file_o = fopen(obj_file, "ab");
-
-			if (!file_o) {
-				fprintf( stderr, "File .o not open! \n");
-				return -1;
-			}
-
-			fwrite(&cell, sizeof(uint16_t), 1, file_o);
-
-
-			fclose(file_o);
-		}
-
-		//sc_commandEncode(asm_encoding(cmd), oper, &value);
-    	//sc_memorySet(addr, value);
-	}
-*/
 	fclose(file_sa);
 /*
 	uint16_t b[10] = {0};
@@ -110,28 +68,8 @@ int asm_processing(char* asm_file, char* obj_file){
 */
 	return 0;
 }
-	
-	/*
-	int term = open(TERM, O_RDWR);
-    if (term == -1) {
-        fprintf(stderr, "%s\n", "asm_processing: terminal error");
-        close (term);
-        return;
-    }
 
-    char buff[12] = {0};
-    int addr = 0, oper = 0x0, value;
-    char* com[7] = {0};
-    sc_memoryGet(mem_ptr, &value);
-    write(term, "Enter asm command > ", 20);
-    read(term, buff, 12);
-    sscanf(buff, "%x %s %x", &addr, &com, &oper);
-    sc_commandEncode(asm_encoding(com), oper, &value);
-    sc_memorySet(addr, value);
-    clearInput();
-    close(term);
-}
-*/
+
 static int asm_encoding(char* command) {
 
 	if (!strncmp(command, "READ", 4)) {
