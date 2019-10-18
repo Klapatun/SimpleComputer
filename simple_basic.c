@@ -41,14 +41,14 @@ struct values {
 };
 
 static int last_stack_idx;
+static int num_str;
 
 
-void basic_processing (const char* basic_file, const char* asm_file) {
+int basic_processing (const char* basic_file, const char* asm_file) {
 
 	char basic_cmd[50] = {0};
 	char command[7] = {0};
 	char value[40] = {0}; 
-	int num_str = 0;
 
 	last_stack_idx = 0x63;
 
@@ -76,7 +76,18 @@ void basic_processing (const char* basic_file, const char* asm_file) {
 			num_str++;
 		}
 		else if (!strncmp(command, "INPUT", 5)) {
-			//input_basic();
+			
+			char tmp[10] = {0};
+			sscanf(&basic_cmd[6], "%s ", tmp);
+
+			int tmp_int = strlen(tmp);
+			if(tmp_int != 1) {
+				fprintf( stderr, "Error: line number %d! \n", num_str); //ИСПРАВИТЬ num_str не то
+				return -1;
+			}
+
+			input_basic(tmp[0], asm_file);
+
 			num_str++;
 		}
 		else if (!strncmp(command, "OUTPUT", 6)) {
@@ -108,7 +119,7 @@ void basic_processing (const char* basic_file, const char* asm_file) {
 
 
 
-static int rem_basic(char* comment, const char* asm_file_name) {
+static int rem_basic(char* comment, char* asm_file_name) {
 
 	FILE *file_sa = fopen(asm_file_name, "at");
 
@@ -117,8 +128,11 @@ static int rem_basic(char* comment, const char* asm_file_name) {
 		return -1;
 	}
 
+	char asm_comment[30] = {0};
 
-
+	sprintf(asm_comment, ";%s", comment);
+	int num = strlen(asm_comment);
+	int num_2 = fwrite(asm_comment, sizeof(int), num, file_sa);
 
 	fclose(file_sa);
 	return 0;
@@ -132,7 +146,17 @@ static int input_basic(char value_name, const char* asm_file_name) {
 		return -1;
 	}
 
+	int addr_val = value_cheker(value_name, 0);
+	if (addr_val == 0) {
+		fclose(file_sa);
+		return -1;
+	}
 
+	char asm_cmd[30] = {0};
+
+	sprintf(asm_cmd, "%x %s %x", 46, "READ", addr_val);
+
+	fwrite(asm_cmd, 10, sizeof(int), file_sa);
 
 
 	fclose(file_sa);
@@ -159,7 +183,9 @@ static int end_basic(const char* asm_file_name) {
 
 }
 
-
+/*
+** возвращает адресс переменной
+*/
 static int value_cheker(char value_name, int data) {
 
 	static struct values user_values;
