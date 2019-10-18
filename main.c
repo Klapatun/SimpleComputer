@@ -16,6 +16,7 @@
 #include "read_key.h"
 #include "alu_cu.h"
 #include "assembler.h"
+#include "simple_basic.h"
 
 void processing(void);
 
@@ -124,16 +125,17 @@ void processing(void) {
     	char file_name[30] = {0};
     	sscanf(&buff[4], "%s", file_name);
 
-    	//char ram_dump[MEMSIZE];
-    	//memcpy(ram_dump, ram, MEMSIZE);
     	sc_memoryLoad(file_name);
 
     	sc_regSet(IR, 1);
 		sc_regSet(IF, 0);
-		//return;
+    }
+    else if (!strncmp(buff, "basic", 5)) {
+    	char bas_file[22] = {0};
+    	char sa_file[22] = {0};
+    	sscanf(&buff[5], "%s %s", bas_file, sa_file);
 
-
-		//memcpy(ram, ram_dump, MEMSIZE);
+    	basic_processing(bas_file, sa_file);
 
     }
     else {
