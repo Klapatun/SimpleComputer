@@ -2,11 +2,15 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "simple_basic.h"
 
-static int rem_basic(char* comment, const char* asm_file_name);
+//static int rem_basic(char* comment, const char* asm_file_name);
 static int input_basic(char value_name, const char* asm_file_name);
+static int output_basic(char value_name, const char* asm_file_name);
+static int goto_basic(int str_addr, const char* asm_file_name);
+static int end_basic(const char* asm_file_name);
 
 static int value_cheker(char value_name, int data);
 
@@ -72,12 +76,12 @@ int basic_processing (const char* basic_file, const char* asm_file) {
 		sscanf(basic_cmd, "%s ", command);
 		
 		if (!strncmp(command, "REM", 3)) {
-			rem_basic(&basic_cmd[4], asm_file);
+			//rem_basic(&basic_cmd[4], asm_file);
 			num_str++;
 		}
 		else if (!strncmp(command, "INPUT", 5)) {
 			
-			char tmp[10] = {0};
+			char tmp[30] = {0};
 			sscanf(&basic_cmd[6], "%s ", tmp);
 
 			int tmp_int = strlen(tmp);
@@ -92,18 +96,43 @@ int basic_processing (const char* basic_file, const char* asm_file) {
 		}
 		else if (!strncmp(command, "OUTPUT", 6)) {
 
+			char tmp[30] = {0};
+			sscanf(&basic_cmd[7], "%s ", tmp);
+
+			int tmp_int = strlen(tmp);
+			if(tmp_int != 1) {
+				fprintf( stderr, "Error: line number %d! \n", num_str); //ИСПРАВИТЬ num_str не то
+				return -1;
+			}
+
+			output_basic(tmp[0], asm_file);
+
+			num_str++;
+
 		}
 		else if (!strncmp(command, "GOTO", 4)) {
 
+			char tmp_char[10] = {0};
+			sscanf(&basic_cmd[5], "%s\n", tmp_char);
+			goto_basic(atoi(tmp_char), asm_file);
+			num_str++;
 		}
 		else if (!strncmp(command, "IF", 2)) {
+			char condition_str[10] = {0};
+			char addr_str[3] = {0};
 
+			sscanf(command, "IF %s GOTO %s\n", condition_str, addr_str);
+
+
+
+			num_str++;
 		}
 		else if (!strncmp(command, "LET", 3)) {
 
 		}
 		else if (!strncmp(command, "END", 3)) {
-
+			end_basic(asm_file);
+			num_str++;
 		}
 		else {
 
@@ -118,7 +147,7 @@ int basic_processing (const char* basic_file, const char* asm_file) {
 }
 
 
-
+/*
 static int rem_basic(char* comment, char* asm_file_name) {
 
 	FILE *file_sa = fopen(asm_file_name, "at");
@@ -137,9 +166,9 @@ static int rem_basic(char* comment, char* asm_file_name) {
 	fclose(file_sa);
 	return 0;
 }
-
+*/
 static int input_basic(char value_name, const char* asm_file_name) {
-	FILE *file_sa = fopen(asm_file_name, "at");
+	FILE *file_sa = fopen(asm_file_name, "a+t");
 
 	if (!file_sa) {
 		fprintf( stderr, "File .sa not open! \n");
@@ -154,21 +183,71 @@ static int input_basic(char value_name, const char* asm_file_name) {
 
 	char asm_cmd[30] = {0};
 
-	sprintf(asm_cmd, "%x %s %x", 46, "READ", addr_val);
+	//if(num_str > 0x0F) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str, "READ", addr_val);
+	/*}
+	else {
+		sprintf(asm_cmd, "0%x %s %x\n", num_str, "READ", addr_val);
+	}*/
 
-	fwrite(asm_cmd, 10, sizeof(int), file_sa);
+	fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
 
 
 	fclose(file_sa);
 	return 0;
 }
 
-static int output_basic(char* value_name, const char* asm_file_name) {
+static int output_basic(char value_name, const char* asm_file_name) {
+	FILE *file_sa = fopen(asm_file_name, "a+t");
 
+	if (!file_sa) {
+		fprintf( stderr, "File .sa not open! \n");
+		return -1;
+	}
+
+	int addr_val = value_cheker(value_name, 0);
+	if (addr_val == 0) {
+		fclose(file_sa);
+		return -1;
+	}
+
+	char asm_cmd[30] = {0};
+
+	//if(num_str > 0x0F) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str, "WRITE", addr_val);
+	/*}
+	else {
+		sprintf(asm_cmd, "0%x %s %x\n", num_str, "WRITE", addr_val);
+	}*/
+
+	fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+
+	fclose(file_sa);
+	return 0;
 }
 
-static int goto_basic(char* str_addr, const char* asm_file_name) {
+static int goto_basic(int str_addr, const char* asm_file_name) {
+	FILE *file_sa = fopen(asm_file_name, "a+t");
 
+	if (!file_sa) {
+		fprintf( stderr, "File .sa not open! \n");
+		return -1;
+	}
+
+	char asm_cmd[30] = {0};
+
+	//if (num_str > 0x0F) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str, "JUMP", str_addr);
+	/*}
+	else{
+		sprintf(asm_cmd, "0%x %s %x\n", num_str, "JUMP", str_addr);
+	}*/
+	
+
+	fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+
+	fclose(file_sa);
+	return 0;
 }
 
 static int if_basic(char* value, const char* asm_file_name) {
@@ -180,8 +259,36 @@ static int let_basic(char* value, const char* asm_file_name) {
 }
 
 static int end_basic(const char* asm_file_name) {
+	FILE *file_sa = fopen(asm_file_name, "a+t");
 
+	if (!file_sa) {
+		fprintf( stderr, "File .sa not open! \n");
+		return -1;
+	}
+
+	char asm_cmd[30] = {0};
+	
+	//if(num_str > 0x0F) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str, "HALT", 0);
+	/*}
+	else {
+		sprintf(asm_cmd, "0%x %s %x\n", num_str, "HALT", 0);
+	}
+	*/
+	fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+
+	fclose(file_sa);
+	return 0;
 }
+
+
+static int condition_check(char* condition) {
+
+	
+	return 0;
+}
+
+
 
 /*
 ** возвращает адресс переменной

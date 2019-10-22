@@ -1,2 +1,4 @@
-REM This is comment
 INPUT A
+OUTPUT A
+GOTO 0
+END
