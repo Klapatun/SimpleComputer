@@ -10,6 +10,7 @@
 static int input_basic(char value_name, const char* asm_file_name);
 static int output_basic(char value_name, const char* asm_file_name);
 static int goto_basic(int str_addr, const char* asm_file_name);
+static int if_goto_basic(char* condition_str, int addr, const char* asm_file_name);
 static int end_basic(const char* asm_file_name);
 
 static int value_cheker(char value_name);
@@ -129,34 +130,8 @@ int basic_processing (const char* basic_file, const char* asm_file) {
 			//char* oper_1[3] = {0};
 			//char* oper_2[3] = {0};
 			//char* token[3] = {0};
-			int oper_1 = 0, oper_2 = 0;
-			char token[3] = {0};
 
-			condition_check(condition_str, &oper_1, &oper_2, token);
-
-			
-
-			if(!strncmp(token, ">", 1)) {
-
-			}
-			else if (!strncmp(token, "<", 1)) {
-
-			}
-			else if (!strncmp(token, "=", 1)) {
-
-			}
-			else if (!strncmp(token, ">=", 2)) {
-
-			}
-			else if (!strncmp(token, "<=", 2)) {
-
-			}
-			else if (!strncmp(token, "!=", 2)) {
-
-			}
-			else {
-
-			}
+			if_goto_basic(condition_str, addr, asm_file);
 			
 
 			num_str++;
@@ -284,8 +259,64 @@ static int goto_basic(int str_addr, const char* asm_file_name) {
 	return 0;
 }
 
-static int if_basic(char* value, const char* asm_file_name) {
+static int if_goto_basic(char* condition_str, int addr, const char* asm_file_name) {
+	FILE *file_sa = fopen(asm_file_name, "a+t");
 
+	if (!file_sa) {
+		fprintf( stderr, "File .sa not open! \n");
+		return -1;
+	}
+
+	int oper_1 = 0, oper_2 = 0;
+	char token[3] = {0};
+
+	char asm_cmd[30] = {0};
+
+	condition_check(condition_str, &oper_1, &oper_2, token);
+
+	sprintf(asm_cmd, "%x %s %x\n", num_str++, "LOAD", oper_1);
+	fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+	sprintf(asm_cmd, "%x %s %x\n", num_str++, "SUB", oper_2);
+	fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);	
+
+	if(!strncmp(token, ">", 1)) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str++, "JNS", addr);
+		fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+	}
+	else if (!strncmp(token, "<", 1)) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str++, "JNEG", addr);
+		fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+	}
+	else if (!strncmp(token, "=", 1)) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str++, "JZ", addr);
+		fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+	}
+	else if (!strncmp(token, ">=", 2)) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str++, "JNS", addr);
+		fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+		sprintf(asm_cmd, "%x %s %x\n", num_str++, "JZ", addr);
+		fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+	}
+	else if (!strncmp(token, "<=", 2)) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str++, "JNEG", addr);
+		fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+		sprintf(asm_cmd, "%x %s %x\n", num_str++, "JZ", addr);
+		fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+	}
+	else if (!strncmp(token, "!=", 2)) {
+		sprintf(asm_cmd, "%x %s %x\n", num_str, "JZ", num_str+2);
+		fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+		sprintf(asm_cmd, "%x %s %x\n", num_str, "JUMP", addr);
+		fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
+	}
+	else {
+		fprintf( stderr, "if_goto_basic: condition incorrect! \n");
+		fclose(file_sa);
+		return -1;
+	}
+
+	fclose(file_sa);
+	return 0;
 }
 
 static int let_basic(char* value, const char* asm_file_name) {
