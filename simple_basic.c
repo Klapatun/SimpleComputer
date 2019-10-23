@@ -12,7 +12,9 @@ static int output_basic(char value_name, const char* asm_file_name);
 static int goto_basic(int str_addr, const char* asm_file_name);
 static int end_basic(const char* asm_file_name);
 
-static int value_cheker(char value_name, int data);
+static int value_cheker(char value_name);
+static int condition_check(char* condition_str, int* operand_1, int* operand_2, char* token);
+
 
 struct values {
 
@@ -118,12 +120,44 @@ int basic_processing (const char* basic_file, const char* asm_file) {
 			num_str++;
 		}
 		else if (!strncmp(command, "IF", 2)) {
-			char condition_str[10] = {0};
+			char condition_str[20] = {0};
 			char addr_str[3] = {0};
 
-			sscanf(command, "IF %s GOTO %s\n", condition_str, addr_str);
+			sscanf(basic_cmd, "IF %s GOTO %s\n", condition_str, addr_str);
 
+			int addr = atoi(addr_str);
+			//char* oper_1[3] = {0};
+			//char* oper_2[3] = {0};
+			//char* token[3] = {0};
+			int oper_1 = 0, oper_2 = 0;
+			char token[3] = {0};
 
+			condition_check(condition_str, &oper_1, &oper_2, token);
+
+			
+
+			if(!strncmp(token, ">", 1)) {
+
+			}
+			else if (!strncmp(token, "<", 1)) {
+
+			}
+			else if (!strncmp(token, "=", 1)) {
+
+			}
+			else if (!strncmp(token, ">=", 2)) {
+
+			}
+			else if (!strncmp(token, "<=", 2)) {
+
+			}
+			else if (!strncmp(token, "!=", 2)) {
+
+			}
+			else {
+
+			}
+			
 
 			num_str++;
 		}
@@ -175,7 +209,7 @@ static int input_basic(char value_name, const char* asm_file_name) {
 		return -1;
 	}
 
-	int addr_val = value_cheker(value_name, 0);
+	int addr_val = value_cheker(value_name);
 	if (addr_val == 0) {
 		fclose(file_sa);
 		return -1;
@@ -205,7 +239,7 @@ static int output_basic(char value_name, const char* asm_file_name) {
 		return -1;
 	}
 
-	int addr_val = value_cheker(value_name, 0);
+	int addr_val = value_cheker(value_name);
 	if (addr_val == 0) {
 		fclose(file_sa);
 		return -1;
@@ -282,9 +316,48 @@ static int end_basic(const char* asm_file_name) {
 }
 
 
-static int condition_check(char* condition) {
+static int condition_check(char* condition_str, int* operand_1, int* operand_2, char* token) {
+	//char condition_token[4] = {'>', '<', '=', '!'}; 
+	char tmp_str[3] = {0};
+	uint8_t num = 0;
+	uint8_t before_token = strcspn(condition_str, "><=!");
 
-	
+	//Проверка есть ли в строке условие
+	if(before_token == strlen(condition_str)) {
+		fprintf( stderr, "condition_check: condition incorrect! \n");
+		return -1;
+	}
+
+	//Пишем первый операнд
+	memcpy(tmp_str, condition_str, before_token);
+
+	if(!(*operand_1 = value_cheker(tmp_str[0]))) {
+		*operand_1 = atoi(tmp_str);
+	}
+
+	num++;
+
+	//Какое сравнение
+	if (condition_str[before_token] != '=') {
+		uint8_t tmp = strcspn(condition_str, "="); 
+		if (strlen(condition_str) > tmp) {
+			num++;
+		}
+	}
+
+	//Пишем, какое условие
+	memcpy(token, &condition_str[before_token], num);
+
+
+
+	uint8_t oper_2_num = strlen(condition_str) - (before_token+num);
+	//Пишем второй операнд
+	memcpy(tmp_str, &condition_str[before_token+num], oper_2_num);
+
+	if (!(*operand_2 = value_cheker(tmp_str[0]))) {
+		*operand_2 = atoi(tmp_str);
+	}
+
 	return 0;
 }
 
@@ -293,7 +366,7 @@ static int condition_check(char* condition) {
 /*
 ** возвращает адресс переменной
 */
-static int value_cheker(char value_name, int data) {
+static int value_cheker(char value_name) {
 
 	static struct values user_values;
 
