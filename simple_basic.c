@@ -5,6 +5,8 @@
 #include <stdlib.h>
 
 #include "simple_basic.h"
+#include "variables.h"
+#include "opz.h"
 
 //static int rem_basic(char* comment, const char* asm_file_name);
 static int input_basic(char value_name, const char* asm_file_name);
@@ -17,37 +19,9 @@ static int value_cheker(char value_name);
 static int condition_check(char* condition_str, int* operand_1, int* operand_2, char* token);
 
 
-struct values {
 
-	int A;
-	int B;
-	int C;
-	int D;
-	int E;
-	int F;
-	int G;
-	int H;
-	int I;
-	int J;
-	int K;
-	int L;
-	int M;
-	int N;
-	int O;
-	int P;
-	int Q;
-	int R;
-	int S;
-	int T;
-	int U;
-	int V;
-	int W;
-	int X;
-	int Y;
-	int Z;
-};
 
-static int last_stack_idx;
+//static int last_stack_idx;
 static int num_str;
 
 
@@ -57,7 +31,7 @@ int basic_processing (const char* basic_file, const char* asm_file) {
 	char command[7] = {0};
 	char value[40] = {0}; 
 
-	last_stack_idx = 0x63;
+	//last_stack_idx = 0x63;
 
 	FILE *file_bas = fopen(basic_file, "rt");
 
@@ -137,7 +111,13 @@ int basic_processing (const char* basic_file, const char* asm_file) {
 			num_str++;
 		}
 		else if (!strncmp(command, "LET", 3)) {
+			char* exp[50] = {0};
 
+			int num = opz(&basic_cmd[4], exp);
+
+
+
+			num_str++;
 		}
 		else if (!strncmp(command, "END", 3)) {
 			end_basic(asm_file);
@@ -333,18 +313,13 @@ static int end_basic(const char* asm_file_name) {
 
 	char asm_cmd[30] = {0};
 	
-	//if(num_str > 0x0F) {
-		sprintf(asm_cmd, "%x %s %x\n", num_str, "HALT", 0);
-	/*}
-	else {
-		sprintf(asm_cmd, "0%x %s %x\n", num_str, "HALT", 0);
-	}
-	*/
+	sprintf(asm_cmd, "%x %s %x\n", num_str, "HALT", 0);
 	fwrite(asm_cmd, sizeof(char), strlen(asm_cmd), file_sa);
 
 	fclose(file_sa);
 	return 0;
 }
+
 
 
 static int condition_check(char* condition_str, int* operand_1, int* operand_2, char* token) {
@@ -394,326 +369,3 @@ static int condition_check(char* condition_str, int* operand_1, int* operand_2, 
 
 
 
-/*
-** возвращает адресс переменной
-*/
-static int value_cheker(char value_name) {
-
-	static struct values user_values;
-
-	switch(value_name) {
-		case 'A':
-
-			if (!(user_values.A)) {
-
-				user_values.A = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.A;
-			
-			break;
-
-		case 'B':
-		
-			if (!(user_values.B)) {
-
-				user_values.B = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.B;
-
-			break;
-
-		case 'C':
-			
-			if (!(user_values.C)) {
-
-				user_values.C = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.C;
-
-			break;
-
-		case 'D':
-			
-			if (!(user_values.D)) {
-
-				user_values.D = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.D;
-
-			break;
-
-		case 'E':
-			
-			if (!(user_values.E)) {
-
-				user_values.E = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.E;
-
-			break;
-
-		case 'F':
-			
-			if (!(user_values.F)) {
-
-				user_values.F = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.F;
-
-			break;
-
-		case 'G':
-			
-			if (!(user_values.G)) {
-
-				user_values.G = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.G;
-
-			break;
-			
-		case 'H':
-			
-			if (!(user_values.H)) {
-
-				user_values.H = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.H;
-
-			break;
-
-		case 'I':
-			
-			if (!(user_values.I)) {
-
-				user_values.I = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.I;
-
-			break;
-
-		case 'J':
-
-			if (!(user_values.J)) {
-
-				user_values.J = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.J;
-
-			break;
-
-		case 'K':
-
-			if (!(user_values.K)) {
-
-				user_values.K = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.K;
-
-			break;
-
-		case 'L':
-
-			if (!(user_values.L)) {
-
-				user_values.L = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.L;
-
-			break;
-
-		case 'M':
-
-			if (!(user_values.M)) {
-
-				user_values.M = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.M;
-
-			break;
-
-		case 'N':
-
-			if (!(user_values.N)) {
-
-				user_values.N = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.N;
-
-			break;
-
-		case 'O':
-		
-			if (!(user_values.O)) {
-
-				user_values.O = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.O;
-
-			break;
-
-		case 'P':
-
-			if (!(user_values.P)) {
-
-				user_values.P = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.P;
-
-			break;
-
-		case 'Q':
-
-			if (!(user_values.Q)) {
-
-				user_values.Q = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.Q;
-
-			break;
-		case 'R':
-
-			if (!(user_values.R)) {
-
-				user_values.R = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.R;
-
-			break;
-
-		case 'S':
-
-			if (!(user_values.S)) {
-
-				user_values.S = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.S;
-
-			break;
-
-		case 'T':
-
-			if (!(user_values.T)) {
-
-				user_values.T = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.T;
-
-			break;
-
-		case 'U':
-
-			if (!(user_values.U)) {
-
-				user_values.U = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.U;
-
-			break;
-
-		case 'V':
-
-			if (!(user_values.V)) {
-
-				user_values.V = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.V;
-
-			break;
-
-		case 'W':
-
-			if (!(user_values.W)) {
-
-				user_values.W = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.W;
-
-			break;
-
-		case 'X':
-
-			if (!(user_values.X)) {
-
-				user_values.X = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.X;
-
-			break;
-
-		case 'Y':
-
-			if (!(user_values.Y)) {
-
-				user_values.Y = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.Y;
-
-			break;
-
-		case 'Z':
-
-			if (!(user_values.Z)) {
-
-				user_values.Z = last_stack_idx;
-				last_stack_idx--;
-			}
-
-			return user_values.Z;
-
-			break;
-
-		default:
-			return 0;
-	}
-}
