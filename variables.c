@@ -7,7 +7,7 @@ static int last_stack_idx = 0x63;
 /*
 ** возвращает адресс переменной
 */
-static int value_cheker(char value_name) {
+int value_cheker(char value_name) {
 
 	static struct values user_values;
     

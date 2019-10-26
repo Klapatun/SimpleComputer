@@ -12,9 +12,15 @@
                                 exp++;\
                             }
 
-static struct opz_stack* opz_stack_init(void) {
-    return opz_stack_push(NULL, 0);
-}
+static void opz_stack_free_all(struct opz_stack* stack);
+static struct opz_stack* opz_stack_push(struct opz_stack* last_element, char operator);
+static struct opz_stack* opz_stack_pull(struct opz_stack* stack, char* p_var);
+static int opz_stack_priority(char var);
+static int opz_stack_search_open_bracket(struct opz_stack* last);
+static int opz_stack_search_less(struct opz_stack* last, char var_new);
+static int opz_stack_add(struct opz_stack** p_stack, char variable);
+
+
 static void opz_stack_free_all(struct opz_stack* stack) {
     if (stack->deeper) {
         opz_stack_free_all(stack->deeper);
@@ -25,9 +31,17 @@ static void opz_stack_free_all(struct opz_stack* stack) {
 
 static struct opz_stack* opz_stack_push(struct opz_stack* last_element, char operator) {
 	
-    struct opz_stack* tmp = (struct opz_stack*)malloc(sizeof(struct opz_stack));
+    struct opz_stack* tmp= NULL;
+    
+    if (last_element->variable != 0) {
 
-    tmp->deeper = last_element;
+        tmp = (struct opz_stack*)malloc(sizeof(struct opz_stack));
+        tmp->deeper = last_element;
+    }
+    else {
+        tmp = last_element;
+    }
+
     tmp->variable = operator;
 
 
@@ -39,7 +53,13 @@ static struct opz_stack* opz_stack_pull(struct opz_stack* stack, char* p_var) {
     struct opz_stack* tmp = stack->deeper;
     *p_var = stack->variable;
 
-    free(stack);
+    if (tmp == NULL){
+        stack->variable = 0;
+        tmp = stack;
+    }
+    else {
+        free(stack);
+    }
 
     return tmp;
 }
@@ -55,6 +75,8 @@ static int opz_stack_priority(char var) {
         return 2;
     case '/':
         return 2;
+    case '(':
+        return 3;
     default:
         return 0;
     }
@@ -87,45 +109,79 @@ static int opz_stack_search_less(struct opz_stack* last, char var_new) {
 
     }
     else {
-        return 1;
+        return 0;
     }
 }
 
+static struct opz_stack* opz_stack_init(void){
+    struct opz_stack* tmp = (struct opz_stack*)malloc(sizeof(struct opz_stack));
+
+    tmp->deeper = NULL;
+    tmp->variable = 0;
+
+    return tmp;
+}
+
+static void opz_stack_free(struct opz_stack* p_stack) {
+    struct opz_stack* tmp;
+
+    do {
+        tmp = p_stack->deeper;
+        free(p_stack);
+        p_stack = tmp;
+    }while(p_stack);
+}
+
 /*возвращает: -1 - нету открыв скобки, 
+              -2 - p_stack равен нулю,
+              -3 - нету такого значения,
                0 - нормально; 
                * (любое другое значение) - кол-во необходимых pull перед*/
-static int opz_stack_add(struct opz_stack* stack, char variable) {
+static int opz_stack_add(struct opz_stack** p_stack, char variable) {
+    struct opz_stack* tmp;
+
+    if(*p_stack == NULL) {
+        tmp = opz_stack_init();
+        tmp->deeper = NULL;
+        tmp->variable = 0;
+        *p_stack = tmp;
+        tmp = NULL;
+    }
+
+    tmp = *p_stack;
 
     //если стек пустой
-    if(stack == NULL) {
-        stack = opz_stack_push(NULL, variable);
+    if(tmp->variable == 0) {
+        tmp->variable = variable;
+        //p_stack = opz_stack_push(NULL, variable);
         return 0;
     }
 
     //Если это ")",ищем, сколько надо будет сделать pull
     if(variable == ')') {
-        return opz_stack_search_open_bracket(stack);
+        return opz_stack_search_open_bracket(tmp);
     }
 
     //Сравниваем приоритет операций
     int var_new = opz_stack_priority(variable);
 
-    if (var_new == 0) {
-        //Значит это открывающая скобка "("
-        stack = opz_stack_push(stack, variable);
-        return 0;
-    }
+    int var_stack = opz_stack_priority(tmp->variable);
 
-    int var_stack = opz_stack_priority(stack->variable);
+    if (var_new == 0 || var_stack == 0) {
+        //Ошибка, переменная неизвестна
+        return -3;
+    }
 
     if (var_stack >= var_new) {
-        //Выдаем сколько надо вытащить из стека
-        return opz_stack_search_less(stack, var_new);
+        //помещаем в стек
+        //struct opz_stack* tmp; //= p_stack;
+        *p_stack = opz_stack_push(tmp, variable);
+
+        return 0;
     }
     else {
-        //помещаем в стек
-        stack = opz_stack_push(stack, variable);
-        return 0;
+        //Выдаем сколько надо вытащить из стека
+        return opz_stack_search_less(*p_stack, var_new);
     }
 
 }
@@ -142,7 +198,10 @@ int opz (char* expression_before, char* expression_after) { //обратная �
     int num_after = 0;
     int exp_before_size = strlen(expression_before);
 
-    struct opz_stack* stack = NULL;
+    int res = 0;
+    char var = 0;
+
+    struct opz_stack* stack = opz_stack_init();
 
     for (int i=0; i<exp_before_size; i++) {
 
@@ -157,49 +216,129 @@ int opz (char* expression_before, char* expression_after) { //обратная �
             //первая фаза или третья
             if(phase == 0 || phase == 2) {
                 //Ошибка
+                opz_stack_free(stack);
                 return 0;
             }
 
             //вторая фаза - время для "=", записываем в expression_after
             expression_after[num_after++] = expression_before[i];
-
+            phase++;
             break;
 
         case '(':
-            if (!opz_stack_add(stack, '(')) { //если вернули не 0,то что-то не так
+            if (opz_stack_add(&stack, '(')) { //если вернули не 0,то что-то не так
                 //Ошибка
+                opz_stack_free(stack);
                 return 0;
             }
             break;
 
         case ')':
-            int res = opz_stack_add(stack, ')');
+            
+            res = opz_stack_add(&stack, ')');
 
-            if (res == -1) {    //нету открыв скобки
+            if (res == -1 || res == 0 || res == -3 || res == -2) {    
+                //нету открыв скобки / ')' не должен записываться в стек / косяк с приоритетом / stack == 0
                 //Ошибка
-                return 0;
-            }
-            else if (res == 0) {    //если ноль, то косяк
-                //Ошибка
+                opz_stack_free(stack);
                 return 0;
             }
             else {  //а тут нормально
                 //Надо считать данные
+                char var = 0;
+                //Выгружает из стека значения и присваивает expression_after
+                for(; res>0; res--) {
+                    stack = opz_stack_pull(stack, &var);
+                    if(var != '(') {
+                        expression_after[num_after++] = var;
+                        expression_after[num_after++] = ',';
+                    }
+                }
             }
             break;
         case '+':
+            if (phase == 0 || phase == 1) {
+                //Ошибка
+                opz_stack_free(stack);
+                return 0;
+            }
+
+            //Третья фаза
+            //int res = opz_stack_add(stack, '+');
+            res = opz_stack_add(&stack, '+');
+            var = 0;
+            for(;res > 0;res--) {  //надо вытащить из стека
+                stack = opz_stack_pull(stack, &var);
+                expression_after[num_after++] = var;
+                expression_after[num_after++] = ',';
+            }
+            //залить в стек
+            if (var) {
+                opz_stack_add(&stack, '+');
+            }
 
             break;
 
         case '-':
+            if (phase == 0 || phase == 1) {
+                //Ошибка
+                opz_stack_free(stack);
+                return 0;
+            }
+
+            //Третья фаза
+            int res = opz_stack_add(&stack, '-');
+            char var = 0;
+            for(;res > 0;res--) {  //надо вытащить из стека
+                stack = opz_stack_pull(stack, &var);
+                expression_after[num_after++] = var;
+            }
+            //залить в стек
+            if (var) {
+                opz_stack_add(&stack, '-');
+            }
 
             break;
 
         case '*':
+            if (phase == 0 || phase == 1) {
+                //Ошибка
+                opz_stack_free(stack);
+                return 0;
+            }
+
+            //Третья фаза
+            res = opz_stack_add(&stack, '*');
+            var = 0;
+            for(;res > 0;res--) {  //надо вытащить из стека
+                stack = opz_stack_pull(stack, &var);
+                expression_after[num_after++] = var;
+            }
+            //залить в стек
+            if (var) {
+                opz_stack_add(&stack, '*');
+            }
 
             break;
 
         case '/':
+            if (phase == 0 || phase == 1) {
+                //Ошибка
+                opz_stack_free(stack);
+                return 0;
+            }
+
+            //Третья фаза
+            res = opz_stack_add(&stack, '/');
+            var = 0;
+            for(;res > 0;res--) {  //надо вытащить из стека
+                stack = opz_stack_pull(stack, &var);
+                expression_after[num_after++] = var;
+            }
+            //залить в стек
+            if (var) {
+                opz_stack_add(&stack, '/');
+            }
 
             break;
 
@@ -210,15 +349,18 @@ int opz (char* expression_before, char* expression_after) { //обратная �
                 //Если это не переменная, выдаем ошибку
                 if(!value_cheker(expression_before[i])) {
                     //Ошибка, слева не переменная
+                    opz_stack_free(stack);
                     return 0;
                 }
                 expression_after[num_after++] = expression_before[i];
+                phase++;
                 break;
             }
 
             //вторая фаза
             if(phase == 1) {
                 //Так как во второй фазе возможно появление только =, то ошибка
+                opz_stack_free(stack);
                 return 0;
             }
 
@@ -226,6 +368,7 @@ int opz (char* expression_before, char* expression_after) { //обратная �
             if(value_cheker(expression_before[i])) {
                 //если сюда зашло, значит это переменная
                 expression_after[num_after++] = expression_before[i];
+                expression_after[num_after++] = ',';
                 break;
             }
             //а это число
@@ -239,54 +382,31 @@ int opz (char* expression_before, char* expression_after) { //обратная �
                     if(j && j<5) {
                         break;
                     }
+
+                    if (expression_before[i+j] == '\n' || expression_before[i+j] == 0) {
+                        while (stack->variable != 0) {
+                            stack = opz_stack_pull(stack, &var);
+                            expression_after[num_after++] = var;
+                        }
+                        opz_stack_free(stack);
+                        break;
+                    }
+
                     //Ошибка, 1. некорректное значение 2. значение j = 5, значит число превышает
+                    opz_stack_free(stack);
                     return 0;
                     
                 }
             }
-
+            expression_after[num_after++] = ',';
             break;
         }
     }
-
-
 /*
-    //Если вдруг решили поставить много пробелов
-    AVOID_SPACE(expression_before);
-
-    //Проверяем, есть ли такая переменная
-    //Если нету, то печально, числам присваивать ничего нельзя
-    int addr_left = value_cheker(expression_before[0]);
-
-    if (!addr_left) {
-        //Ошибка, такой переменной не существует
-        return 0;
+    while (stack != NULL) {
+        stack = opz_stack_pull(stack, &var);
+        expression_after[num_after++] = var;
     }
-
-    expression_after[count++] = expression_before[0];
-    expression_before++;
-
-    //Если вдруг решили поставить много пробелов
-    AVOID_SPACE(expression_before);
-
-
-    //Поиск знака равно
-    if (expression_before[0] != '=') {
-        //Ошибка, должен быть знак =
-        return 0;
-    }
-    expression_after[count++] = expression_before[0];
-    expression_before++;
-
-    //Если вдруг решили поставить пробелы
-    AVOID_SPACE(expression_before);
-
-
-
-
-	for (int i=0; i<strlen(expression_before); i++) {
-
-	}
 */
 	return strlen(expression_after);
 }

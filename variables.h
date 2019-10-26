@@ -33,4 +33,7 @@ struct values {
 	int Z;
 };
 
+
+int value_cheker(char value_name);
+
 #endif /*VARIABLES_H*/

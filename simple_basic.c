@@ -15,7 +15,7 @@ static int goto_basic(int str_addr, const char* asm_file_name);
 static int if_goto_basic(char* condition_str, int addr, const char* asm_file_name);
 static int end_basic(const char* asm_file_name);
 
-static int value_cheker(char value_name);
+//static int value_cheker(char value_name);
 static int condition_check(char* condition_str, int* operand_1, int* operand_2, char* token);
 
 
@@ -111,7 +111,7 @@ int basic_processing (const char* basic_file, const char* asm_file) {
 			num_str++;
 		}
 		else if (!strncmp(command, "LET", 3)) {
-			char* exp[50] = {0};
+			char exp[50] = {0};
 
 			int num = opz(&basic_cmd[4], exp);
 

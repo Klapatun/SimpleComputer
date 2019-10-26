@@ -2,4 +2,3 @@
 1 LOAD 63
 2 SUB 0
 3 JNEG 0
-5 HALT 0
