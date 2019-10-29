@@ -1,4 +1,4 @@
 INPUT A
 IF A<=0 GOTO 0
-LET C=((A+B)/2)*D
+LET C=(A+B)*D
 END

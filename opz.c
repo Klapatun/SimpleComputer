@@ -251,7 +251,7 @@ int opz (char* expression_before, char* expression_after) { //обратная �
                     stack = opz_stack_pull(stack, &var);
                     if(var != '(') {
                         expression_after[num_after++] = var;
-                        expression_after[num_after++] = ',';
+                        //expression_after[num_after++] = ',';
                     }
                 }
             }
@@ -270,7 +270,7 @@ int opz (char* expression_before, char* expression_after) { //обратная �
             for(;res > 0;res--) {  //надо вытащить из стека
                 stack = opz_stack_pull(stack, &var);
                 expression_after[num_after++] = var;
-                expression_after[num_after++] = ',';
+                //expression_after[num_after++] = ',';
             }
             //залить в стек
             if (var) {
@@ -368,9 +368,26 @@ int opz (char* expression_before, char* expression_after) { //обратная �
             if(value_cheker(expression_before[i])) {
                 //если сюда зашло, значит это переменная
                 expression_after[num_after++] = expression_before[i];
-                expression_after[num_after++] = ',';
+                //expression_after[num_after++] = ',';
                 break;
             }
+
+
+
+            if (expression_before[i] == '\n' || expression_before[i] == 0) {
+                while (stack->variable != 0) {
+                    stack = opz_stack_pull(stack, &var);
+                    expression_after[num_after++] = var;
+                }
+                opz_stack_free(stack);
+                break;
+            }
+
+            //Ошибка
+            opz_stack_free(stack);
+            return 0;
+            
+            /*
             //а это число
             char number[6] = {0};
             
@@ -398,7 +415,8 @@ int opz (char* expression_before, char* expression_after) { //обратная �
                     
                 }
             }
-            expression_after[num_after++] = ',';
+            */
+            //expression_after[num_after++] = ',';
             break;
         }
     }

@@ -35,5 +35,7 @@ struct values {
 
 
 int value_cheker(char value_name);
+int tmp_alloc_stack(void);
+void tmp_free_stack(void);
 
 #endif /*VARIABLES_H*/

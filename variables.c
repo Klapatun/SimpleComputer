@@ -4,6 +4,16 @@
 
 static int last_stack_idx = 0x63;
 
+/*возвращает адрес переменной*/
+int tmp_alloc_stack(void) {
+	int tmp = last_stack_idx;
+	last_stack_idx--;
+	return tmp;
+}
+
+void tmp_free_stack(void) {
+	last_stack_idx++;
+}
 /*
 ** возвращает адресс переменной
 */
